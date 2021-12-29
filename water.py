@@ -2,7 +2,8 @@ import requests
 import json
 
 api_url = "http://localhost:3000/systems/should-water"
-payload = {"id": "1", "key": "12345"}
+with open("config.txt", "r") as f:
+    payload = json.loads(f.read())
 
 response = requests.get(api_url, params=payload)
 
