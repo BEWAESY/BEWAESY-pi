@@ -4,7 +4,7 @@ from datetime import datetime
 import time
 import RPi.GPIO as GPIO
 
-api_url = "http://localhost:3000/"
+api_url = "http://192.168.178.65:3000/"
 with open("config.txt", "r") as f:
     payload = json.loads(f.read())
 
@@ -45,6 +45,8 @@ def activatePump(data, value):
         print("Cooldown issue!")
 
 
+print("---------")
+print("Check started at", datetime.now())
 
 response = requests.get(api_url + "systems/should-water", params=payload)
 
