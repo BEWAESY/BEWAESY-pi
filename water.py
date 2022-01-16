@@ -3,32 +3,89 @@ import json
 from datetime import datetime
 import time
 import RPi.GPIO as GPIO
+import board
+import adafruit_dht
+
+alreadyActivated = False
 
 api_url = "http://192.168.178.65:3000/"
 with open("config.txt", "r") as f:
     payload = json.loads(f.read())
 
+# Initiate DHT sensor
+dhtDevice = adafruit_dht.DHT11(board.D18)
+def dhtValues():
+  dhtError = -1
+
+  while True:
+    if dhtError >= 10:
+      return("Error")
+
+    dhtError += 1
+
+    try:
+        temperature_c = dhtDevice.temperature
+        humidity = dhtDevice.humidity
+
+        if dhtError == 0: print("Keine Fehler beim Auslesen des DHT-Sensors")
+
+        return(temperature_c, humidity)
+    except RuntimeError as error:
+        # Errors happen fairly often, DHT's are hard to read, just keep going
+        print(error.args[0])
+        time.sleep(2.0)
+        continue
+    except Exception as error:
+        dhtDevice.exit()
+        raise error
+
+
 
 def checkData(data):
+    print("Check triggers:")
+
     for value in data[1]:
+        # Continue if one trigger already triggered system
+        if (alreadyActivated == True): continue
+
         # Check if value is for temperature or humidity
         if value["eventTrigger"] == "time" and value["triggerValue1"] == datetime.now().strftime("%H:%M"):
             activatePump(data, value)
+        elif value["eventTrigger"] == "temperature":
+            # Check if value is in temperature range where plant should be watered
+            if value["triggerRange"] == "smaller" and dhtResult[0] <= int(value["triggerValue1"]):
+                activatePump(data, value)
+            elif value["triggerRange"] == "bigger" and dhtResult[0] >= int(value["triggerValue1"]):
+                activatePump(data, value)
+            else:
+                print("- Temperature not in right range")
+        elif value["eventTrigger"] == "humidity":
+            # Check if value is in humidity range where plant should be watered
+            if value["triggerRange"] == "smaller" and dhtResult[1] <= int(value["triggerValue1"]):
+                activatePump(data, value)
+            elif value["triggerRange"] == "bigger" and dhtResult[1] >= int(value["triggerValue1"]):
+                activatePump(data, value)
+            else:
+                print("- Humidity not in right range")
         else:
-            print("No active event")
+            print("- No active event")
 
 
 def activatePump(data, value):
     lastExecution = datetime.strptime(data[0][0]["lastExecution"], "%Y-%m-%dT%H:%M:%S.%fZ")
 
+    print("Trigger with ID", value["id"], "fits. Checking cooldown and maxSeconds.")
+
     # Check if plant should be watered
-    if (datetime.now() - lastExecution).total_seconds() >= data[0][0]["cooldown"]:
+    if (datetime.utcnow() - lastExecution).total_seconds() >= data[0][0]["cooldown"]:
         print(f"Water Plant for {value['seconds']} seconds")
+        global alreadyActivated
+        alreadyActivated = True
 
         # Send data to API that plant was watered
         apiData = {
             "seconds": value["seconds"],
-            "timestamp": datetime.now()
+            "timestamp": datetime.utcnow()
         }
         responsePost = requests.post(api_url + "systems/watered-plant", params=payload, data=apiData)
         print(responsePost)
@@ -42,11 +99,16 @@ def activatePump(data, value):
 
         GPIO.cleanup()
     else:
-        print("Cooldown issue!")
+        print("Cooldown active!")
 
 
 print("---------")
-print("Check started at", datetime.now())
+print("Check started at", datetime.utcnow())
+print("DHT sensor:")
+dhtResult = dhtValues()
+print("Current temperature:", dhtResult[0], "°C")
+print("Current humidity:", dhtResult[1], "%")
+print("---")
 
 response = requests.get(api_url + "systems/should-water", params=payload)
 
