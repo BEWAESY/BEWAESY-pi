@@ -6,9 +6,11 @@ import RPi.GPIO as GPIO
 import board
 import adafruit_dht
 
-alreadyActivated = False
+alreadyActivated = False  # Used so that system does not trigger multiple times at once
 
-api_url = "http://192.168.178.65:3000/"
+# 
+api_url = "http://192.168.178.65:3000/"  # URL to the API
+# Get id and API-key from config file, current data in the file is dummy data
 with open("config.txt", "r") as f:
     payload = json.loads(f.read())
 
@@ -40,7 +42,7 @@ def dhtValues():
         raise error
 
 
-
+# Check if plant should be watered
 def checkData(data):
     print("Check triggers:")
 
@@ -71,6 +73,7 @@ def checkData(data):
             print("- No active event")
 
 
+# When plant should be watered, check if cooldown is active, and if not water plant
 def activatePump(data, value):
     lastExecution = datetime.strptime(data[0][0]["lastExecution"], "%Y-%m-%dT%H:%M:%S.%fZ")
 
@@ -102,6 +105,7 @@ def activatePump(data, value):
         print("Cooldown active!")
 
 
+# Start check
 print("---------")
 print("Check started at", datetime.utcnow())
 print("DHT sensor:")
@@ -110,7 +114,7 @@ print("Current temperature:", dhtResult[0], "°C")
 print("Current humidity:", dhtResult[1], "%")
 print("---")
 
-response = requests.get(api_url + "systems/should-water", params=payload)
+response = requests.get(api_url + "systems/should-water", params=payload)  # Get data from API
 
 if response.status_code == 200:
     checkData(response.json())
