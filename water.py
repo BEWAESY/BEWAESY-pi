@@ -114,7 +114,12 @@ print("Current temperature:", dhtResult[0], "°C")
 print("Current humidity:", dhtResult[1], "%")
 print("---")
 
-response = requests.get(api_url + "systems/should-water", params=payload)  # Get data from API
+weatherData = {
+    "temperature": dhtResult[0],
+    "humidity":    dhtResult[1]
+}
+
+response = requests.get(api_url + "systems/should-water", params=payload, data=weatherData)  # Get data from API
 
 if response.status_code == 200:
     checkData(response.json())
