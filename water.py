@@ -8,8 +8,8 @@ import adafruit_dht
 
 alreadyActivated = False  # Used so that system does not trigger multiple times at once
 
-# 
-api_url = "http://192.168.178.65:3000/"  # URL to the API
+#
+api_url = "https://bewaesy-api.azurewebsites.net/"  # URL to the API
 # Get id and API-key from config file, current data in the file is dummy data
 with open("config.txt", "r") as f:
     payload = json.loads(f.read())
