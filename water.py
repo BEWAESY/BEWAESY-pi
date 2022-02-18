@@ -79,28 +79,31 @@ def activatePump(data, value):
 
     print("Trigger with ID", value["id"], "fits. Checking cooldown and maxSeconds.")
 
-    # Check if plant should be watered
+    # Check if cooldown
     if (datetime.utcnow() - lastExecution).total_seconds() >= data[0][0]["cooldown"]:
-        print(f"Water Plant for {value['seconds']} seconds")
-        global alreadyActivated
-        alreadyActivated = True
+        if (data[3] + value["seconds"] <= data[2]):
+            print(f"Water Plant for {value['seconds']} seconds")
+            global alreadyActivated
+            alreadyActivated = True
 
-        # Send data to API that plant was watered
-        apiData = {
-            "seconds": value["seconds"],
-            "timestamp": datetime.utcnow()
-        }
-        responsePost = requests.post(api_url + "systems/watered-plant", params=payload, data=apiData)
-        print(responsePost)
+            # Send data to API that plant was watered
+            apiData = {
+                "seconds": value["seconds"],
+                "timestamp": datetime.utcnow()
+            }
+            responsePost = requests.post(api_url + "systems/watered-plant", params=payload, data=apiData)
+            print(responsePost)
 
-        # Activate pump
-        # Start Relay for given time
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(14, GPIO.OUT)
+            # Activate pump
+            # Start Relay for given time
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setup(14, GPIO.OUT)
 
-        time.sleep(value["seconds"])
+            time.sleep(value["seconds"])
 
-        GPIO.cleanup()
+            GPIO.cleanup()
+        else:
+            print("maxSeconds reached!")
     else:
         print("Cooldown active!")
 
